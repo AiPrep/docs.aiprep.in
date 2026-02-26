@@ -1,0 +1,214 @@
+---
+title: REST API
+description: Complete reference for the REST API including authentication, endpoints, and response formats.
+---
+
+# REST API Reference
+
+The REST API lets you interact with your resources programmatically. All endpoints return JSON and use standard HTTP verbs.
+
+## Base URL
+
+```
+https://api.docstech.dev/v1
+```
+
+All API requests must be made over HTTPS. Calls made over plain HTTP will be rejected.
+
+## Authentication
+
+Authenticate by including your API key in the `Authorization` header:
+
+```bash
+curl -H "Authorization: Bearer sk_live_abc123..." \
+  https://api.docstech.dev/v1/projects
+```
+
+> **Note:** Keep your API keys secure. Do not expose them in client-side code or commit them to version control.
+
+## Rate Limits
+
+| Plan       | Requests/min | Burst |
+|------------|-------------|-------|
+| Free       | 60          | 10    |
+| Pro        | 600         | 100   |
+| Enterprise | 6000        | 1000  |
+
+When you exceed the rate limit, the API returns a `429 Too Many Requests` response with a `Retry-After` header.
+
+---
+
+## Endpoints
+
+### List Projects
+
+Retrieve all projects for the authenticated user.
+
+```
+GET /v1/projects
+```
+
+**Query Parameters**
+
+| Parameter | Type     | Default | Description                    |
+|-----------|----------|---------|--------------------------------|
+| `page`    | integer  | `1`     | Page number for pagination     |
+| `limit`   | integer  | `20`    | Items per page (max 100)       |
+| `status`  | string   | `all`   | Filter by status: `active`, `archived`, `all` |
+
+**Response**
+
+```json
+{
+  "data": [
+    {
+      "id": "proj_8a3b2c1d",
+      "name": "My Documentation",
+      "status": "active",
+      "created_at": "2025-01-15T09:30:00Z",
+      "updated_at": "2025-02-20T14:22:00Z"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 1
+  }
+}
+```
+
+---
+
+### Get Project
+
+Retrieve a single project by ID.
+
+```
+GET /v1/projects/:id
+```
+
+**Path Parameters**
+
+| Parameter | Type   | Description        |
+|-----------|--------|--------------------|
+| `id`      | string | The project ID     |
+
+**Response**
+
+```json
+{
+  "id": "proj_8a3b2c1d",
+  "name": "My Documentation",
+  "status": "active",
+  "settings": {
+    "theme": "default",
+    "custom_domain": "docs.example.com",
+    "visibility": "public"
+  },
+  "created_at": "2025-01-15T09:30:00Z",
+  "updated_at": "2025-02-20T14:22:00Z"
+}
+```
+
+---
+
+### Create Project
+
+Create a new project.
+
+```
+POST /v1/projects
+```
+
+**Request Body**
+
+```json
+{
+  "name": "New Project",
+  "settings": {
+    "theme": "default",
+    "visibility": "public"
+  }
+}
+```
+
+| Field              | Type   | Required | Description                          |
+|--------------------|--------|----------|--------------------------------------|
+| `name`             | string | Yes      | Project name (3-64 characters)       |
+| `settings.theme`   | string | No       | Theme identifier, defaults to `default` |
+| `settings.visibility` | string | No    | `public` or `private`, defaults to `public` |
+
+**Response** `201 Created`
+
+```json
+{
+  "id": "proj_9x8w7v6u",
+  "name": "New Project",
+  "status": "active",
+  "settings": {
+    "theme": "default",
+    "custom_domain": null,
+    "visibility": "public"
+  },
+  "created_at": "2025-02-27T10:00:00Z",
+  "updated_at": "2025-02-27T10:00:00Z"
+}
+```
+
+---
+
+### Delete Project
+
+Permanently delete a project and all its content.
+
+```
+DELETE /v1/projects/:id
+```
+
+**Response** `204 No Content`
+
+No response body is returned.
+
+---
+
+## Error Handling
+
+All errors follow a consistent format:
+
+```json
+{
+  "error": {
+    "code": "invalid_request",
+    "message": "The 'name' field is required.",
+    "status": 400
+  }
+}
+```
+
+**Common Error Codes**
+
+| Status | Code               | Description                      |
+|--------|--------------------|----------------------------------|
+| 400    | `invalid_request`  | Malformed request body or params |
+| 401    | `unauthorized`     | Missing or invalid API key       |
+| 403    | `forbidden`        | Insufficient permissions         |
+| 404    | `not_found`        | Resource does not exist          |
+| 429    | `rate_limited`     | Too many requests                |
+| 500    | `internal_error`   | Unexpected server error          |
+
+## SDKs
+
+Official client libraries are available for popular languages:
+
+- **JavaScript/TypeScript** — `npm install @docstech/sdk`
+- **Python** — `pip install docstech`
+- **Go** — `go get github.com/docstech/docstech-go`
+
+```typescript
+import { DocsTech } from "@docstech/sdk"
+
+const client = new DocsTech({ apiKey: "sk_live_abc123..." })
+
+const projects = await client.projects.list({ status: "active" })
+console.log(projects.data)
+```

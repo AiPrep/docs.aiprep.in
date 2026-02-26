@@ -1,0 +1,60 @@
+---
+title: Installation
+description: Install DocsTech and set up your local development environment.
+---
+
+# Installation
+
+## Prerequisites
+
+- Node.js 18+ or Bun 1.0+
+- Git
+
+## Install
+
+```bash
+bunx create-docstech@latest my-docs
+cd my-docs
+bun dev
+```
+
+Your docs site is now running at `http://localhost:3000`.
+
+## Project Structure
+
+After scaffolding, your project looks like this:
+
+```
+my-docs/
+├── content/
+│   └── docs/          # Your MDX documentation files
+├── app/
+│   └── docs/          # Next.js routes (auto-generated)
+├── components/        # UI components
+├── public/            # Static assets
+├── next.config.ts
+└── package.json
+```
+
+## Adding Content
+
+Create `.mdx` files inside `content/docs/`. Each file needs frontmatter:
+
+```mdx
+---
+title: My Page
+description: A short description for SEO and previews.
+---
+
+# My Page
+
+Your content here.
+```
+
+The file path determines the URL:
+
+| File                          | URL                     |
+|-------------------------------|-------------------------|
+| `content/docs/introduction.mdx` | `/docs/introduction`  |
+| `content/docs/api/rest.mdx`     | `/docs/api/rest`      |
+| `content/docs/guides/routing.mdx` | `/docs/guides/routing` |
