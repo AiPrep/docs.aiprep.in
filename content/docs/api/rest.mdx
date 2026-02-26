@@ -77,6 +77,14 @@ GET /v1/projects
 }
 ```
 
+**Try it out**
+
+<ApiPlayground
+  method="GET"
+  url="https://jsonplaceholder.typicode.com/posts"
+  params={[{ key: "page", value: "1" }, { key: "limit", value: "20" }]}
+/>
+
 ---
 
 ### Get Project
@@ -109,6 +117,13 @@ GET /v1/projects/:id
   "updated_at": "2025-02-20T14:22:00Z"
 }
 ```
+
+**Try it out**
+
+<ApiPlayground
+  method="GET"
+  url="https://jsonplaceholder.typicode.com/posts/1"
+/>
 
 ---
 
@@ -155,6 +170,15 @@ POST /v1/projects
 }
 ```
 
+**Try it out**
+
+<ApiPlayground
+  method="POST"
+  url="https://jsonplaceholder.typicode.com/posts"
+  headers={[{ key: "Content-Type", value: "application/json" }]}
+  body={`{\n  "title": "New Project",\n  "body": "Project description",\n  "userId": 1\n}`}
+/>
+
 ---
 
 ### Delete Project
@@ -168,6 +192,13 @@ DELETE /v1/projects/:id
 **Response** `204 No Content`
 
 No response body is returned.
+
+**Try it out**
+
+<ApiPlayground
+  method="DELETE"
+  url="https://jsonplaceholder.typicode.com/posts/1"
+/>
 
 ---
 

@@ -1,6 +1,7 @@
 import type { MDXComponents } from "mdx/types"
 import { slugify } from "@/lib/toc"
 import { CodeBlock } from "./code-block"
+import { ApiPlayground } from "@/components/api-playground/api-playground"
 
 export const mdxComponents: MDXComponents = {
   h1: (props) => (
@@ -73,4 +74,5 @@ export const mdxComponents: MDXComponents = {
     return <code {...props} />
   },
   strong: (props) => <strong className="font-semibold" {...props} />,
+  ApiPlayground,
 }
