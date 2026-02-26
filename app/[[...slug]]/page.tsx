@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation"
 import { MDXRemote } from "next-mdx-remote/rsc"
 import rehypePrettyCode from "rehype-pretty-code"
-import { getDocBySlug, getAllDocSlugs } from "@/lib/content"
+import { getDocBySlug, getAllDocSlugs, getAdjacentPages } from "@/lib/content"
 import { mdxComponents } from "@/app/_components/mdx-components"
 import { extractHeadings } from "@/lib/toc"
 import { TableOfContents } from "@/app/_components/table-of-contents"
 import { CopyPageButton } from "@/app/_components/copy-page-button"
+import { PageNavigation } from "@/app/_components/page-navigation"
 
 const DEFAULT_SLUG = ["introduction"]
 
@@ -42,6 +43,8 @@ export default async function Page({ params }: PageProps) {
     notFound()
   }
 
+  const currentHref = slug ? `/${slug.join("/")}` : "/"
+  const { prev, next } = getAdjacentPages(currentHref)
   const headings = extractHeadings(doc.content)
 
   const pageComponents = {
@@ -76,6 +79,7 @@ export default async function Page({ params }: PageProps) {
             },
           }}
         />
+        <PageNavigation prev={prev} next={next} />
       </article>
       {headings.length > 0 && (
         <aside className="hidden xl:block">

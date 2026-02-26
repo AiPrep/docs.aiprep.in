@@ -2,6 +2,7 @@ import { cache } from "react"
 import fs from "fs"
 import path from "path"
 import matter from "gray-matter"
+import { getFlatNavItems } from "@/components/sidebar/navigation"
 
 const CONTENT_DIR = path.join(process.cwd(), "content/docs")
 
@@ -23,6 +24,47 @@ export const getDocBySlug = cache(function getDocBySlug(slug: string[]) {
     content,
   }
 })
+
+export type AdjacentPage = {
+  title: string
+  description: string
+  href: string
+}
+
+/**
+ * Given a href (e.g. "/" or "/installation"), return the previous and next
+ * pages based on the sidebar navigation order, with descriptions from frontmatter.
+ */
+export function getAdjacentPages(href: string): {
+  prev: AdjacentPage | null
+  next: AdjacentPage | null
+} {
+  const items = getFlatNavItems()
+
+  const index = items.findIndex((item) => item.href === href)
+  if (index === -1) return { prev: null, next: null }
+
+  function resolve(
+    navItem: { title: string; href: string } | undefined
+  ): AdjacentPage | null {
+    if (!navItem) return null
+    const slug =
+      navItem.href === "/"
+        ? ["introduction"]
+        : navItem.href.split("/").filter(Boolean)
+    const doc = getDocBySlug(slug)
+    return {
+      title: navItem.title,
+      description: doc?.frontmatter.description ?? "",
+      href: navItem.href,
+    }
+  }
+
+  return {
+    prev: resolve(items[index - 1]),
+    next: resolve(items[index + 1]),
+  }
+}
 
 export function getAllDocSlugs(): string[][] {
   const slugs: string[][] = []

@@ -11,6 +11,11 @@ export type NavGroup = {
   items: NavItem[]
 }
 
+/** Flat ordered list of all nav items across groups. */
+export function getFlatNavItems(): NavItem[] {
+  return docsNavigation.flatMap((group) => group.items)
+}
+
 export const docsNavigation: NavGroup[] = [
   {
     title: "Getting Started",
