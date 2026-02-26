@@ -2,26 +2,28 @@ import { notFound } from "next/navigation"
 import { MDXRemote } from "next-mdx-remote/rsc"
 import rehypePrettyCode from "rehype-pretty-code"
 import { getDocBySlug, getAllDocSlugs } from "@/lib/content"
-import { mdxComponents } from "@/app/docs/_components/mdx-components"
+import { mdxComponents } from "@/app/_components/mdx-components"
 import { extractHeadings } from "@/lib/toc"
-import { TableOfContents } from "@/app/docs/_components/table-of-contents"
-import { CopyPageButton } from "@/app/docs/_components/copy-page-button"
+import { TableOfContents } from "@/app/_components/table-of-contents"
+import { CopyPageButton } from "@/app/_components/copy-page-button"
 
-type DocsPageProps = {
+const DEFAULT_SLUG = ["introduction"]
+
+type PageProps = {
   params: Promise<{
     slug?: string[]
   }>
 }
 
 export async function generateStaticParams() {
-  return getAllDocSlugs().map((slug) => ({ slug }))
+  return [{ slug: [] }, ...getAllDocSlugs().map((slug) => ({ slug }))]
 }
 
-export async function generateMetadata({ params }: DocsPageProps) {
+export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params
-  if (!slug) return { title: "Documentation" }
+  const resolvedSlug = slug ?? DEFAULT_SLUG
 
-  const doc = getDocBySlug(slug)
+  const doc = getDocBySlug(resolvedSlug)
   if (!doc) return { title: "Documentation" }
 
   return {
@@ -30,21 +32,11 @@ export async function generateMetadata({ params }: DocsPageProps) {
   }
 }
 
-export default async function DocsPage({ params }: DocsPageProps) {
+export default async function Page({ params }: PageProps) {
   const { slug } = await params
+  const resolvedSlug = slug ?? DEFAULT_SLUG
 
-  if (!slug) {
-    return (
-      <section className="mx-auto max-w-3xl space-y-4">
-        <h1 className="text-3xl font-semibold">Documentation</h1>
-        <p className="text-muted-foreground">
-          Welcome to the docs. Pick a page from the sidebar to get started.
-        </p>
-      </section>
-    )
-  }
-
-  const doc = getDocBySlug(slug)
+  const doc = getDocBySlug(resolvedSlug)
 
   if (!doc) {
     notFound()

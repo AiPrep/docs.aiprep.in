@@ -16,13 +16,13 @@ export const docsNavigation: NavGroup[] = [
     title: "Getting Started",
     icon: IconRocket,
     items: [
-      { title: "Introduction", href: "/docs/introduction" },
-      { title: "Installation", href: "/docs/installation" },
+      { title: "Introduction", href: "/" },
+      { title: "Installation", href: "/installation" },
     ],
   },
   {
     title: "API Reference",
     icon: IconApi,
-    items: [{ title: "REST API", href: "/docs/api/rest" }],
+    items: [{ title: "REST API", href: "/api/rest" }],
   },
 ]

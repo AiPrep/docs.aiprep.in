@@ -1,3 +1,4 @@
+import { cache } from "react"
 import fs from "fs"
 import path from "path"
 import matter from "gray-matter"
@@ -9,7 +10,7 @@ export type DocFrontmatter = {
   description: string
 }
 
-export function getDocBySlug(slug: string[]) {
+export const getDocBySlug = cache(function getDocBySlug(slug: string[]) {
   const filePath = path.join(CONTENT_DIR, ...slug) + ".mdx"
 
   if (!fs.existsSync(filePath)) return null
@@ -21,7 +22,7 @@ export function getDocBySlug(slug: string[]) {
     frontmatter: data as DocFrontmatter,
     content,
   }
-}
+})
 
 export function getAllDocSlugs(): string[][] {
   const slugs: string[][] = []

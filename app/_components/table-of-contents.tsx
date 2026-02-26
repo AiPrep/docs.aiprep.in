@@ -13,7 +13,7 @@ export function TableOfContents({ headings }: { headings: TocHeading[] }) {
 
     if (elements.length === 0) return
 
-    const scrollRoot = document.querySelector("main.overflow-auto")
+    const scrollRoot = document.querySelector("[data-scroll-root]")
 
     const observer = new IntersectionObserver(
       (entries) => {
