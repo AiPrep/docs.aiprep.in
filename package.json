@@ -2,6 +2,7 @@
   "name": "docstech",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "bun",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -19,7 +20,6 @@
     "next-themes": "^0.4.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "react-turnstile": "^1.1.5",
     "rehype-pretty-code": "^0.14.1",
     "shadcn": "^3.8.5",
     "shiki": "^3.23.0",

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import { Turnstile } from "react-turnstile"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { RequestBar } from "./request-bar"
@@ -9,7 +8,7 @@ import { RequestConfig } from "./request-config"
 import { ResponseViewer } from "./response-viewer"
 import { CodeGenerator } from "./code-generator"
 import { createPair } from "./key-value-editor"
-import { useTurnstile } from "@/hooks/use-turnstile"
+import { getTurnstileToken, preWarmTurnstileToken } from "@/lib/turnstile"
 import { useApiKey } from "@/providers/api-key-provider"
 import type {
   HttpMethod,
@@ -71,8 +70,11 @@ export function ApiPlayground({
   const [response, setResponse] = useState<ProxyResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const turnstile = useTurnstile()
   const { apiKey, setApiKey } = useApiKey()
+
+  useEffect(() => {
+    preWarmTurnstileToken("api_playground")
+  }, [])
 
   // Populate X-API-Key header from stored API key on mount
   useEffect(() => {
@@ -135,16 +137,18 @@ export function ApiPlayground({
   async function handleSend() {
     if (!url) return
 
-    if (!turnstile.token) {
-      setError("Please complete the verification challenge first.")
-      return
-    }
-
     setLoading(true)
     setError(null)
     setResponse(null)
 
     try {
+      let token: string | null = null
+      try {
+        token = await getTurnstileToken("api_playground")
+      } catch {
+        // Gracefully continue without token
+      }
+
       const res = await fetch("/api/proxy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -153,7 +157,7 @@ export function ApiPlayground({
           url: buildUrl(),
           headers: buildHeaders(),
           body: body && method !== "GET" ? body : null,
-          turnstileToken: turnstile.token,
+          turnstileToken: token,
         }),
       })
 
@@ -168,7 +172,6 @@ export function ApiPlayground({
       setError(err instanceof Error ? err.message : "An unexpected error occurred")
     } finally {
       setLoading(false)
-      turnstile.reset()
     }
   }
 
@@ -182,14 +185,6 @@ export function ApiPlayground({
           onMethodChange={setMethod}
           onUrlChange={setUrl}
           onSend={handleSend}
-        />
-
-        <Turnstile
-          sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-          onVerify={turnstile.onVerify}
-          onExpire={turnstile.onExpire}
-          onError={turnstile.onError}
-          refreshExpired="auto"
         />
 
         <Separator />
