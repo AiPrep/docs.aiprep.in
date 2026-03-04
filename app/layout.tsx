@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans } from "next/font/google";
-import Script from "next/script";
+
 import "./globals.css";
 
 import { Providers } from "@/providers";
@@ -43,12 +43,6 @@ export default function RootLayout({
       <body
         className={`${notoSans.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
-          <Script
-            src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-            strategy="afterInteractive"
-          />
-        )}
         <Providers>
           <LayoutShell apiItems={apiItems}>{children}</LayoutShell>
         </Providers>

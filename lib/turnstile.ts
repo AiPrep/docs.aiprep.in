@@ -1,40 +1,23 @@
 /**
- * Cloudflare Turnstile Integration
+ * Cloudflare Turnstile Integration via iframe bridge
  *
- * Invisible CAPTCHA for bot protection on expensive endpoints.
- * Used to protect video generation and other resource-intensive operations.
+ * Turnstile is only whitelisted for aiprep.in. This module communicates with
+ * a bridge page on aiprep.in via postMessage to obtain tokens.
  */
 
-declare global {
-  interface Window {
-    turnstile?: {
-      render: (
-        container: HTMLElement | string,
-        options: {
-          sitekey: string;
-          callback: (token: string) => void;
-          "error-callback"?: (error: unknown) => void;
-          "expired-callback"?: () => void;
-          size?: "invisible" | "normal" | "compact";
-          theme?: "light" | "dark" | "auto";
-          action?: string;
-          cData?: string;
-          execution?: "render" | "execute";
-        }
-      ) => string;
-      execute: (container: HTMLElement | string, options?: object) => void;
-      reset: (widgetId: string) => void;
-      remove: (widgetId: string) => void;
-      getResponse: (widgetId: string) => string | undefined;
-    };
-  }
-}
+const BRIDGE_URL =
+  process.env.NEXT_PUBLIC_TURNSTILE_BRIDGE_URL ||
+  "https://aiprep.in/docs";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 // Token cache — Turnstile tokens are valid for 5 minutes; refresh at 4 min.
 const TOKEN_LIFETIME_MS = 4 * 60 * 1000;
 let tokenCache: { token: string; expiresAt: number } | null = null;
+
+// Singleton iframe
+let bridgeIframe: HTMLIFrameElement | null = null;
+let iframeReady: Promise<void> | null = null;
 
 /**
  * Check if Turnstile is available and configured
@@ -62,110 +45,109 @@ export function getCachedTurnstileToken(): string | null {
 export function preWarmTurnstileToken(action?: string): void {
   if (!isTurnstileEnabled()) return;
   if (getCachedTurnstileToken()) return;
-  // Fire-and-forget; errors are swallowed (getTurnstileToken logs them).
   getTurnstileToken(action).catch(() => {});
 }
 
 /**
- * Get a Turnstile token for CAPTCHA verification
- *
- * This creates an invisible CAPTCHA challenge and returns a token
- * that must be verified server-side.
+ * Ensure the bridge iframe is created and loaded.
+ */
+function ensureBridgeIframe(): Promise<void> {
+  if (iframeReady) return iframeReady;
+
+  iframeReady = new Promise<void>((resolve, reject) => {
+    const iframe = document.createElement("iframe");
+    iframe.src = BRIDGE_URL;
+    iframe.style.display = "none";
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.setAttribute("tabindex", "-1");
+
+    const timeout = setTimeout(() => {
+      reject(new Error("[Turnstile] Bridge iframe load timeout"));
+    }, 15000);
+
+    iframe.onload = () => {
+      clearTimeout(timeout);
+      bridgeIframe = iframe;
+      resolve();
+    };
+
+    iframe.onerror = () => {
+      clearTimeout(timeout);
+      iframeReady = null;
+      reject(new Error("[Turnstile] Bridge iframe failed to load"));
+    };
+
+    document.body.appendChild(iframe);
+  });
+
+  return iframeReady;
+}
+
+/**
+ * Get a Turnstile token via the iframe bridge.
  *
  * @param action - Optional action name for analytics
- * @returns Promise resolving to the CAPTCHA token, or null if Turnstile is not available
+ * @returns Promise resolving to the CAPTCHA token, or null if not available
  */
-export async function getTurnstileToken(action?: string): Promise<string | null> {
-  // Skip if not configured (development mode)
+export async function getTurnstileToken(
+  action?: string
+): Promise<string | null> {
   if (!TURNSTILE_SITE_KEY) {
     console.warn("[Turnstile] Site key not configured, skipping CAPTCHA");
     return null;
   }
 
-  // Return cached token if still valid
   const cached = getCachedTurnstileToken();
   if (cached) return cached;
 
-  // Wait for Turnstile script to load
-  if (!window.turnstile) {
-    await waitForTurnstile();
-  }
-
-  if (!window.turnstile) {
-    console.error("[Turnstile] Script not loaded after waiting");
+  try {
+    await ensureBridgeIframe();
+  } catch (error) {
+    console.error("[Turnstile] Failed to load bridge iframe:", error);
     return null;
   }
 
-  return new Promise((resolve, reject) => {
-    // Create a temporary container for the invisible widget
-    const container = document.createElement("div");
-    container.style.display = "none";
-    document.body.appendChild(container);
+  if (!bridgeIframe?.contentWindow) {
+    console.error("[Turnstile] Bridge iframe not available");
+    return null;
+  }
 
-    let widgetId: string | null = null;
-    let timeoutId: NodeJS.Timeout | null = null;
+  const bridgeOrigin = new URL(BRIDGE_URL).origin;
 
-    const cleanup = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      if (widgetId && window.turnstile) {
-        window.turnstile.remove(widgetId);
+  return new Promise<string | null>((resolve, reject) => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    function handleResponse(event: MessageEvent) {
+      if (event.origin !== bridgeOrigin) return;
+
+      if (event.data?.type === "turnstile-response") {
+        cleanup();
+        const token = event.data.token as string;
+        tokenCache = { token, expiresAt: Date.now() + TOKEN_LIFETIME_MS };
+        console.log("[Turnstile] Token obtained via bridge");
+        resolve(token);
+      } else if (event.data?.type === "turnstile-error") {
+        cleanup();
+        console.error("[Turnstile] Bridge error:", event.data.error);
+        reject(new Error(event.data.error || "Turnstile bridge error"));
       }
-      container.remove();
-    };
+    }
 
-    // Timeout after 30 seconds
+    function cleanup() {
+      if (timeoutId) clearTimeout(timeoutId);
+      window.removeEventListener("message", handleResponse);
+    }
+
     timeoutId = setTimeout(() => {
       cleanup();
-      reject(new Error("Turnstile token generation timed out"));
+      reject(new Error("[Turnstile] Token request timed out"));
     }, 30000);
 
-    try {
-      widgetId = window.turnstile!.render(container, {
-        sitekey: TURNSTILE_SITE_KEY,
-        size: "invisible",
-        action: action,
-        callback: (token: string) => {
-          cleanup();
-          tokenCache = { token, expiresAt: Date.now() + TOKEN_LIFETIME_MS };
-          resolve(token);
-        },
-        "error-callback": (error: unknown) => {
-          cleanup();
-          console.error("[Turnstile] Challenge failed:", error);
-          reject(new Error("CAPTCHA challenge failed"));
-        },
-        "expired-callback": () => {
-          cleanup();
-          reject(new Error("CAPTCHA token expired"));
-        },
-      });
-    } catch (error) {
-      cleanup();
-      console.error("[Turnstile] Render failed:", error);
-      reject(error);
-    }
-  });
-}
+    window.addEventListener("message", handleResponse);
 
-/**
- * Wait for the Turnstile script to load
- */
-function waitForTurnstile(timeout = 10000): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (window.turnstile) {
-      resolve();
-      return;
-    }
-
-    const startTime = Date.now();
-    const interval = setInterval(() => {
-      if (window.turnstile) {
-        clearInterval(interval);
-        resolve();
-      } else if (Date.now() - startTime > timeout) {
-        clearInterval(interval);
-        reject(new Error("Turnstile script load timeout"));
-      }
-    }, 100);
+    bridgeIframe!.contentWindow!.postMessage(
+      { type: "turnstile-request", action },
+      bridgeOrigin
+    );
   });
 }
