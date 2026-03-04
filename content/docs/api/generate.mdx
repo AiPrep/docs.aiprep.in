@@ -15,24 +15,25 @@ POST /api/v1/generate
 <ApiPlayground
   method="POST"
   url="https://api.aiprep.in/api/v1/generate"
-  headers={[{ key: "Content-Type", value: "application/json" }]}
-  auth={{ type: "api-key", key: "X-API-Key", value: "", addTo: "header" }}
-  body={`{\n  "query": "Explain the theory of relativity in simple terms",\n  "orientation": "landscape",\n  "language": "english",\n  "duration": 2\n}`}
+  headers='[{"key":"Content-Type","value":"application/json"},{"key":"X-API-Key","value":""}]'
+  body='{"query":"Explain the theory of relativity in simple terms","orientation":"landscape","language":"english","duration":2,"mode":"video","chat_id":null,"images":null}'
 />
 
 ## Headers
 
-- `X-API-Key` (string, required) — Your API key
+- `X-API-Key` (string) — Your API key (use this **or** Authorization)
+- `Authorization` (string) — JWT token as `Bearer <token>`
 
 ## Request Body
 
-- `query` (string, required) — Text query for video generation (5-5000 chars). Queries longer than 500 chars are automatically summarized.
+- `query` (string | null) — Text query for video generation (5–5000 chars). Will be summarized if longer than 500 chars.
 - `orientation` (string, default: `"landscape"`) — Video orientation: `"landscape"` (16:9) or `"portrait"` (9:16)
-- `language` (string, default: `"english"`) — Narration language: `"english"`, `"hindi"`, `"en"`, or `"hi"`
-- `duration` (integer, default: `2`) — Video duration in minutes: `1`, `2`, or `3`
-- `mode` (string, default: `"video"`) — `"video"` generates a video, `"text"` returns an instant text response only
-- `chat_id` (string, optional) — Associate this job with an existing chat session. If omitted, a new chat is created.
-- `images` (string[], optional) — Base64-encoded images (`data:image/png;base64,...`). Max 5 images, 10MB each.
+- `language` (string, default: `"hindi"`) — Narration language: `"hindi"`, `"english"`, `"hi"`, or `"en"`
+- `duration` (integer | null, default: `2`) — Video duration in minutes: `1`, `2`, or `3`
+- `mode` (string, default: `"video"`) — `"video"` generates a video, `"text"` generates instant response only
+- `chat_id` (string | null, optional) — Associate this job with an existing chat session. If omitted, a new chat is created.
+- `images` (string[] | null, optional) — Base64-encoded images (`data:image/png;base64,...`). Max 5 images, 10MB each.
+- `cf_turnstile_token` (string | null, optional) — Cloudflare Turnstile token for bot protection. Required for web users, skipped for API key auth.
 
 ## Response `200 OK`
 
@@ -54,15 +55,15 @@ If the query matches a previously generated video, the response returns immediat
 
 ## Response Fields
 
-- `job_id` (string) — Unique job identifier. Use this to track progress.
-- `chat_id` (string or null) — Chat session ID for follow-up messages.
-- `status` (string) — Job status: `"processing"`, `"completed"`, `"cached"`.
-- `message` (string) — Human-readable status message.
-- `video_url` (string or null) — Video URL (populated immediately if cached).
-- `duration` (integer or null) — Video duration in seconds (if cached).
-- `cached` (boolean) — `true` if the result was served from cache.
-- `instant_response` (object or null) — Instant educational content (if available from cache).
-- `images_metadata` (object or null) — Metadata about processed images.
+- `job_id` (string, required) — Unique job identifier. Use this to track progress.
+- `chat_id` (string | null) — Chat session ID for follow-up messages.
+- `status` (string, required) — Job status: `"processing"`, `"completed"`, `"cached"`.
+- `message` (string, required) — Human-readable status message.
+- `video_url` (string | null) — Video URL (populated immediately if cached).
+- `duration` (integer | null) — Video duration in seconds (if cached).
+- `cached` (boolean, default: `false`) — `true` if the result was served from cache.
+- `instant_response` (object | null) — Instant educational content (if available from cache).
+- `images_metadata` (object | null) — Metadata about processed images.
 
 ## What's Next
 

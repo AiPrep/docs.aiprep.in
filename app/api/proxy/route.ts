@@ -27,7 +27,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
 
-  const { method, url, headers, body: requestBody } = body
+  const { method, url, headers, body: requestBody, turnstileToken } = body
+
+  if (!turnstileToken) {
+    return NextResponse.json(
+      { error: "Turnstile verification required" },
+      { status: 400 }
+    )
+  }
+
+  const turnstileRes = await fetch(
+    "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        secret: process.env.TURNSTILE_SECRET_KEY,
+        response: turnstileToken,
+        remoteip: ip,
+      }),
+    }
+  )
+  const turnstileData = await turnstileRes.json()
+
+  if (!turnstileData.success) {
+    return NextResponse.json(
+      { error: "Turnstile verification failed. Please try again." },
+      { status: 403 }
+    )
+  }
 
   if (!method || !ALLOWED_METHODS.has(method)) {
     return NextResponse.json({ error: "Invalid HTTP method" }, { status: 400 })

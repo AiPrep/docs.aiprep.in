@@ -20,6 +20,7 @@ export type ProxyRequest = {
   url: string
   headers: Record<string, string>
   body: string | null
+  turnstileToken: string
 }
 
 export type ProxyResponse = {

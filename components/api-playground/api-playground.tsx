@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
+import { Turnstile } from "react-turnstile"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { RequestBar } from "./request-bar"
@@ -8,6 +9,8 @@ import { RequestConfig } from "./request-config"
 import { ResponseViewer } from "./response-viewer"
 import { CodeGenerator } from "./code-generator"
 import { createPair } from "./key-value-editor"
+import { useTurnstile } from "@/hooks/use-turnstile"
+import { useApiKey } from "@/providers/api-key-provider"
 import type {
   HttpMethod,
   KeyValuePair,
@@ -17,12 +20,21 @@ import type {
 } from "./types"
 
 type ApiPlaygroundProps = {
-  method?: HttpMethod
+  method?: string
   url?: string
-  params?: { key: string; value: string }[]
-  headers?: { key: string; value: string }[]
+  params?: string
+  headers?: string
   body?: string
-  auth?: AuthConfig
+  auth?: string
+}
+
+function parseJsonProp<T>(value: string | undefined, fallback: T): T {
+  if (!value) return fallback
+  try {
+    return JSON.parse(value) as T
+  } catch {
+    return fallback
+  }
 }
 
 function toPairs(items?: { key: string; value: string }[]): KeyValuePair[] {
@@ -36,18 +48,52 @@ export function ApiPlayground({
   params: initialParams,
   headers: initialHeaders,
   body: initialBody = "",
-  auth: initialAuth = { type: "none" },
+  auth: initialAuth,
 }: ApiPlaygroundProps) {
-  const [method, setMethod] = useState<HttpMethod>(initialMethod)
+  const parsedHeaders = parseJsonProp<{ key: string; value: string }[]>(initialHeaders, [])
+  const parsedParams = parseJsonProp<{ key: string; value: string }[]>(initialParams, [])
+  const parsedAuth = parseJsonProp<AuthConfig>(initialAuth, { type: "none" })
+
+  const [method, setMethod] = useState<HttpMethod>(initialMethod as HttpMethod)
   const [url, setUrl] = useState(initialUrl)
-  const [params, setParams] = useState<KeyValuePair[]>(() => toPairs(initialParams))
-  const [headers, setHeaders] = useState<KeyValuePair[]>(() => toPairs(initialHeaders))
-  const [body, setBody] = useState(initialBody)
-  const [auth, setAuth] = useState<AuthConfig>(initialAuth)
+  const [params, setParams] = useState<KeyValuePair[]>(() => toPairs(parsedParams))
+  const [headers, setHeaders] = useState<KeyValuePair[]>(() => toPairs(parsedHeaders))
+  const [body, setBody] = useState(() => {
+    if (!initialBody) return ""
+    try {
+      return JSON.stringify(JSON.parse(initialBody), null, 2)
+    } catch {
+      return initialBody
+    }
+  })
+  const [auth, setAuth] = useState<AuthConfig>(parsedAuth)
 
   const [response, setResponse] = useState<ProxyResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const turnstile = useTurnstile()
+  const { apiKey, setApiKey } = useApiKey()
+
+  // Populate X-API-Key header from stored API key on mount
+  useEffect(() => {
+    if (apiKey) {
+      setHeaders((prev) =>
+        prev.map((h) =>
+          h.key === "X-API-Key" && !h.value ? { ...h, value: apiKey } : h
+        )
+      )
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiKey])
+
+  // Sync header changes back to stored API key
+  function handleHeadersChange(newHeaders: KeyValuePair[]) {
+    setHeaders(newHeaders)
+    const apiKeyHeader = newHeaders.find((h) => h.key === "X-API-Key")
+    if (apiKeyHeader) {
+      setApiKey(apiKeyHeader.value)
+    }
+  }
 
   const buildUrl = useCallback((): string => {
     if (!url) return ""
@@ -89,6 +135,11 @@ export function ApiPlayground({
   async function handleSend() {
     if (!url) return
 
+    if (!turnstile.token) {
+      setError("Please complete the verification challenge first.")
+      return
+    }
+
     setLoading(true)
     setError(null)
     setResponse(null)
@@ -102,6 +153,7 @@ export function ApiPlayground({
           url: buildUrl(),
           headers: buildHeaders(),
           body: body && method !== "GET" ? body : null,
+          turnstileToken: turnstile.token,
         }),
       })
 
@@ -116,6 +168,7 @@ export function ApiPlayground({
       setError(err instanceof Error ? err.message : "An unexpected error occurred")
     } finally {
       setLoading(false)
+      turnstile.reset()
     }
   }
 
@@ -131,6 +184,14 @@ export function ApiPlayground({
           onSend={handleSend}
         />
 
+        <Turnstile
+          sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+          onVerify={turnstile.onVerify}
+          onExpire={turnstile.onExpire}
+          onError={turnstile.onError}
+          refreshExpired="auto"
+        />
+
         <Separator />
 
         <div className="grid gap-6 lg:grid-cols-2">
@@ -141,7 +202,7 @@ export function ApiPlayground({
               body={body}
               auth={auth}
               onParamsChange={setParams}
-              onHeadersChange={setHeaders}
+              onHeadersChange={handleHeadersChange}
               onBodyChange={setBody}
               onAuthChange={setAuth}
             />

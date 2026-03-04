@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { IconTestPipe } from "@tabler/icons-react"
+import { Turnstile } from "react-turnstile"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -10,6 +11,8 @@ import { RequestConfig } from "./request-config"
 import { ResponseViewer } from "./response-viewer"
 import { CodeGenerator } from "./code-generator"
 import { createPair } from "./key-value-editor"
+import { useTurnstile } from "@/hooks/use-turnstile"
+import { useApiKey } from "@/providers/api-key-provider"
 import type {
   HttpMethod,
   KeyValuePair,
@@ -29,6 +32,40 @@ export function Playground() {
   const [response, setResponse] = useState<ProxyResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const turnstile = useTurnstile()
+  const { apiKey, setApiKey } = useApiKey()
+
+  // Populate auth/header value from stored API key on mount
+  useEffect(() => {
+    if (apiKey && auth.type === "api-key" && auth.key === "X-API-Key" && !auth.value) {
+      setAuth({ ...auth, value: apiKey })
+    }
+    if (apiKey) {
+      setHeaders((prev) =>
+        prev.map((h) =>
+          h.key === "X-API-Key" && !h.value ? { ...h, value: apiKey } : h
+        )
+      )
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiKey])
+
+  // Sync auth changes back to stored API key
+  function handleAuthChange(newAuth: AuthConfig) {
+    setAuth(newAuth)
+    if (newAuth.type === "api-key" && newAuth.key === "X-API-Key") {
+      setApiKey(newAuth.value)
+    }
+  }
+
+  // Sync header changes back to stored API key
+  function handleHeadersChange(newHeaders: KeyValuePair[]) {
+    setHeaders(newHeaders)
+    const apiKeyHeader = newHeaders.find((h) => h.key === "X-API-Key")
+    if (apiKeyHeader) {
+      setApiKey(apiKeyHeader.value)
+    }
+  }
 
   const buildUrl = useCallback((): string => {
     if (!url) return ""
@@ -86,6 +123,11 @@ export function Playground() {
   async function handleSend() {
     if (!url) return
 
+    if (!turnstile.token) {
+      setError("Please complete the verification challenge first.")
+      return
+    }
+
     setLoading(true)
     setError(null)
     setResponse(null)
@@ -99,6 +141,7 @@ export function Playground() {
           url: buildUrl(),
           headers: buildHeaders(),
           body: body && method !== "GET" ? body : null,
+          turnstileToken: turnstile.token,
         }),
       })
 
@@ -113,6 +156,7 @@ export function Playground() {
       setError(err instanceof Error ? err.message : "An unexpected error occurred")
     } finally {
       setLoading(false)
+      turnstile.reset()
     }
   }
 
@@ -142,6 +186,14 @@ export function Playground() {
             onSend={handleSend}
           />
 
+          <Turnstile
+            sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+            onVerify={turnstile.onVerify}
+            onExpire={turnstile.onExpire}
+            onError={turnstile.onError}
+            refreshExpired="auto"
+          />
+
           <Separator />
 
           <div className="grid gap-6 lg:grid-cols-2">
@@ -152,9 +204,9 @@ export function Playground() {
                 body={body}
                 auth={auth}
                 onParamsChange={setParams}
-                onHeadersChange={setHeaders}
+                onHeadersChange={handleHeadersChange}
                 onBodyChange={setBody}
-                onAuthChange={setAuth}
+                onAuthChange={handleAuthChange}
               />
 
               <Separator />

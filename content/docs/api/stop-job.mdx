@@ -15,7 +15,7 @@ POST /api/v1/jobs/{job_id}/stop
 <ApiPlayground
   method="POST"
   url="https://api.aiprep.in/api/v1/jobs/your-job-id/stop"
-  auth={{ type: "api-key", key: "X-API-Key", value: "", addTo: "header" }}
+  headers='[{"key":"X-API-Key","value":""}]'
 />
 
 ## Path Parameters
@@ -24,7 +24,8 @@ POST /api/v1/jobs/{job_id}/stop
 
 ## Headers
 
-- `X-API-Key` (string, required) — Your API key
+- `X-API-Key` (string) — Your API key (use this **or** Authorization)
+- `Authorization` (string) — JWT token as `Bearer <token>`
 
 ## Response `200 OK`
 

@@ -15,7 +15,7 @@ GET /api/v1/jobs/{job_id}/stream
 <ApiPlayground
   method="GET"
   url="https://api.aiprep.in/api/v1/jobs/your-job-id/stream"
-  auth={{ type: "api-key", key: "X-API-Key", value: "", addTo: "header" }}
+  headers='[{"key":"X-API-Key","value":""}]'
 />
 
 ## Path Parameters
@@ -24,7 +24,8 @@ GET /api/v1/jobs/{job_id}/stream
 
 ## Headers
 
-- `X-API-Key` (string, required) — Your API key
+- `X-API-Key` (string) — Your API key (use this **or** Authorization)
+- `Authorization` (string) — JWT token as `Bearer <token>`
 
 ## Event Types
 

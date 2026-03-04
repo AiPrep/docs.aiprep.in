@@ -15,7 +15,7 @@ GET /api/v1/jobs/{job_id}
 <ApiPlayground
   method="GET"
   url="https://api.aiprep.in/api/v1/jobs/your-job-id"
-  auth={{ type: "api-key", key: "X-API-Key", value: "", addTo: "header" }}
+  headers='[{"key":"X-API-Key","value":""}]'
 />
 
 ## Path Parameters
@@ -24,7 +24,8 @@ GET /api/v1/jobs/{job_id}
 
 ## Headers
 
-- `X-API-Key` (string, required) — Your API key
+- `X-API-Key` (string) — Your API key (use this **or** Authorization)
+- `Authorization` (string) — JWT token as `Bearer <token>`
 
 ## Response `200 OK`
 
@@ -35,40 +36,56 @@ GET /api/v1/jobs/{job_id}
   "progress": 45,
   "current_step": "Generating animations",
   "video_url": null,
+  "video_path": null,
   "thumbnail_url": null,
   "duration": null,
   "file_size_mb": null,
   "has_narration": null,
+  "pipeline_variant": null,
+  "segments": null,
   "error": null,
+  "retry_count": null,
   "created_at": "2025-06-01T12:00:00Z",
   "updated_at": "2025-06-01T12:02:30Z",
   "steps": [
-    { "name": "Planning", "status": "completed" },
-    { "name": "Generating animations", "status": "in_progress" },
-    { "name": "Rendering video", "status": "pending" }
+    { "name": "Planning", "status": "completed", "progress": 100, "estimated_seconds": null },
+    { "name": "Generating animations", "status": "in_progress", "progress": 45, "estimated_seconds": 60 },
+    { "name": "Rendering video", "status": "pending", "progress": 0, "estimated_seconds": null }
   ],
   "estimated_time_remaining": 120,
-  "elapsed_time": 150
+  "elapsed_time": 150,
+  "feedback_prompt": null,
+  "preview_video_url": null,
+  "preview_segments_complete": null,
+  "preview_segments_total": null
 }
 ```
 
 ## Response Fields
 
-- `job_id` (string) — Unique job identifier.
-- `status` (string) — `"pending"`, `"processing"`, `"completed"`, `"failed"`, or `"cancelled"`.
-- `progress` (integer) — Progress percentage (0-100).
-- `current_step` (string or null) — Description of the current processing step.
-- `video_url` (string or null) — Final video URL (available when `status` is `"completed"`).
-- `thumbnail_url` (string or null) — Video thumbnail URL.
-- `duration` (number or null) — Video duration in seconds.
-- `file_size_mb` (number or null) — Video file size in megabytes.
-- `has_narration` (boolean or null) — Whether the video includes narration.
-- `error` (string or null) — Error message if `status` is `"failed"`.
-- `steps` (array or null) — Detailed breakdown of processing steps.
-- `estimated_time_remaining` (integer or null) — Estimated seconds remaining.
-- `elapsed_time` (integer or null) — Seconds elapsed since job started.
-- `created_at` (string) — ISO 8601 timestamp of job creation.
-- `updated_at` (string) — ISO 8601 timestamp of last update.
+- `job_id` (string, required) — Unique job identifier.
+- `status` (string, required) — `"pending"`, `"processing"`, `"completed"`, `"failed"`, or `"cancelled"`.
+- `progress` (integer, default: `0`) — Progress percentage (0–100).
+- `current_step` (string | null) — Description of the current processing step.
+- `video_url` (string | null) — Final video URL (available when `status` is `"completed"`).
+- `video_path` (string | null) — Internal video storage path.
+- `thumbnail_url` (string | null) — Video thumbnail URL.
+- `duration` (number | null) — Video duration in seconds.
+- `file_size_mb` (number | null) — Video file size in megabytes.
+- `has_narration` (boolean | null) — Whether the video includes narration.
+- `pipeline_variant` (string | null) — Processing pipeline variant used.
+- `segments` (array | null) — Segment summaries with `index`, `label`, and `duration`.
+- `error` (string | null) — Error message if `status` is `"failed"`.
+- `retry_count` (integer | null) — Number of retries attempted.
+- `created_at` (string, required) — ISO 8601 timestamp of job creation.
+- `updated_at` (string, required) — ISO 8601 timestamp of last update.
+- `steps` (array | null) — Detailed breakdown of processing steps, each with `name`, `status`, `progress` (0–100), and `estimated_seconds`.
+- `estimated_time_remaining` (integer | null) — Estimated seconds remaining.
+- `elapsed_time` (integer | null) — Seconds elapsed since job started.
+- `feedback_prompt` (object | null) — Feedback prompt data for the UI.
+- `preview_video_url` (string | null) — URL for a preview video (partial render).
+- `preview_segments_complete` (integer | null) — Number of preview segments completed.
+- `preview_segments_total` (integer | null) — Total number of preview segments.
 
 > Poll every 2-5 seconds until `status` is `"completed"` or `"failed"`. For real-time updates without polling, use the [SSE Stream](/api/stream) endpoint instead.
 
