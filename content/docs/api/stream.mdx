@@ -1,0 +1,54 @@
+---
+title: Stream Updates (SSE)
+description: Subscribe to real-time Server-Sent Events for video generation progress.
+order: 4
+---
+
+# Stream Updates (SSE)
+
+Subscribe to real-time Server-Sent Events for a job. This is the recommended approach over polling — it provides instant updates with lower latency and no wasted requests.
+
+```
+GET /api/v1/jobs/{job_id}/stream
+```
+
+<ApiPlayground
+  method="GET"
+  url="https://api.aiprep.in/api/v1/jobs/your-job-id/stream"
+  auth={{ type: "api-key", key: "X-API-Key", value: "", addTo: "header" }}
+/>
+
+## Path Parameters
+
+- `job_id` (string, required) — The unique job identifier returned from [/generate](/api/generate)
+
+## Headers
+
+- `X-API-Key` (string, required) — Your API key
+
+## Event Types
+
+- **`instant_response`** — Educational text content generated for the query.
+- **`thumbnail_generated`** — Thumbnail image URL is available.
+- **`video_progress`** — Video generation progress update with percentage.
+- **`video_completed`** — Video generation is complete. Contains `video_url`.
+- **`video_failed`** — Video generation failed. Contains `error` message.
+
+## SSE Message Format
+
+Each message follows the standard SSE format:
+
+```
+event: video_progress
+data: {"progress": 45, "current_step": "Generating animations"}
+
+event: video_completed
+data: {"video_url": "https://storage.aiprep.in/videos/abc123.mp4"}
+```
+
+## Reconnection
+
+On connect, the SSE endpoint replays all stored events for the job. This means if your connection drops and you reconnect, you will receive all previous events followed by any new ones — no data is lost.
+
+> `EventSource` does not support custom headers. Use `fetch` with a streaming reader to pass your API key via the `X-API-Key` header.
+

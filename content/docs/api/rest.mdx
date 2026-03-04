@@ -1,336 +1,88 @@
 ---
-title: REST API
-description: Complete reference for the DocsTech REST API — manage projects, deployments, and access tokens programmatically.
+title: Overview
+description: API overview — base URL, authentication, rate limits, and integration flow.
+order: 1
 ---
 
-# REST API Reference
+# API Overview
 
-The DocsTech REST API enables programmatic management of documentation projects, deployments, team access, and content lifecycle operations. All endpoints accept and return JSON over HTTPS.
+The AIPREP API lets you generate AI-powered educational videos programmatically. Submit a text query, track generation progress via polling or real-time SSE, and retrieve the final video URL.
 
 ## Base URL
 
 ```
-https://api.docstech.dev/v1
+https://api.aiprep.in/api/v1
 ```
 
-All requests must be made over HTTPS. Requests over plain HTTP will receive a `301` redirect. TLS 1.2 is the minimum supported version.
+All API requests must be made over HTTPS.
 
 ## Authentication
 
-Include your API key in the `Authorization` header using the Bearer scheme:
+Authenticate using your API key in the `X-API-Key` header:
 
 ```bash
-curl -H "Authorization: Bearer dtk_live_a1b2c3d4e5f6..." \
-  https://api.docstech.dev/v1/projects
+curl -H "X-API-Key: your-api-key" \
+  https://api.aiprep.in/api/v1/generate
 ```
 
-API keys are scoped to an organization and can be created in the **Settings > API Keys** section of the dashboard. Keys prefixed with `dtk_live_` are production keys; `dtk_test_` keys operate against a sandboxed environment.
-
-> **Security:** Treat API keys as secrets. Do not expose them in client-side code, commit them to version control, or transmit them over unencrypted channels. Rotate keys immediately if a compromise is suspected.
+> **Keep your API key secure.** Do not expose it in client-side code or commit it to version control. All requests should be made from your server.
 
 ## Rate Limits
 
-Rate limits are enforced per API key on a sliding window basis:
+API key requests are subject to the following default limits:
 
-- **Starter** — 60 requests/min, burst capacity of 10, 5 concurrent connections
-- **Team** — 600 requests/min, burst capacity of 100, 25 concurrent connections
-- **Enterprise** — 6,000 requests/min, burst capacity of 1,000, 100 concurrent connections
+- **Per minute** — 10 requests
+- **Per hour** — 100 requests
+- **Per day** — 300 requests
 
-When a rate limit is exceeded, the API returns `429 Too Many Requests` with the following headers:
+When you exceed the rate limit, the API returns a `429 Too Many Requests` response.
 
-- `Retry-After` — Seconds until the next request is permitted
-- `X-RateLimit-Limit` — Maximum requests allowed in the current window
-- `X-RateLimit-Remaining` — Requests remaining in the current window
-
----
-
-## Endpoints
-
-### List Projects
-
-Retrieve all documentation projects for the authenticated organization.
+## Integration Flow
 
 ```
-GET /v1/projects
+1. POST /generate           → Get job_id (instant, ~300ms)
+2. GET /jobs/{job_id}/stream → Subscribe to real-time SSE updates
+   — or —
+   GET /jobs/{job_id}        → Poll for job status
+3. Use video_url from completed job
 ```
-
-**Query Parameters**
-
-- `page` (integer, default `1`) — Page number for cursor-based pagination
-- `per_page` (integer, default `20`) — Results per page (max `100`)
-- `status` (string, default `all`) — Filter by project status: `active`, `archived`, `all`
-- `sort` (string, default `updated_at`) — Sort field: `created_at`, `updated_at`, `name`
-- `order` (string, default `desc`) — Sort direction: `asc` or `desc`
-
-**Response** `200 OK`
-
-```json
-{
-  "data": [
-    {
-      "id": "proj_4f8a2c1d7e9b",
-      "name": "Platform API Reference",
-      "slug": "platform-api-reference",
-      "status": "active",
-      "visibility": "public",
-      "default_branch": "main",
-      "last_deployed_at": "2025-06-14T18:32:00Z",
-      "created_at": "2025-01-10T09:15:00Z",
-      "updated_at": "2025-06-14T18:32:00Z"
-    },
-    {
-      "id": "proj_7b3e9f2a1c8d",
-      "name": "Internal Engineering Handbook",
-      "slug": "internal-engineering-handbook",
-      "status": "active",
-      "visibility": "private",
-      "default_branch": "main",
-      "last_deployed_at": "2025-06-12T11:05:00Z",
-      "created_at": "2024-11-02T14:20:00Z",
-      "updated_at": "2025-06-12T11:05:00Z"
-    }
-  ],
-  "meta": {
-    "page": 1,
-    "per_page": 20,
-    "total": 2,
-    "total_pages": 1
-  }
-}
-```
-
-**Try it out**
-
-<ApiPlayground
-  method="GET"
-  url="https://jsonplaceholder.typicode.com/posts"
-  params={[{ key: "page", value: "1" }, { key: "limit", value: "20" }]}
-/>
-
----
-
-### Get Project
-
-Retrieve a single project by its unique identifier.
-
-```
-GET /v1/projects/:id
-```
-
-**Path Parameters**
-
-- `id` (string) — Unique project identifier (e.g. `proj_4f8a2c1d7e9b`)
-
-**Response** `200 OK`
-
-```json
-{
-  "id": "proj_4f8a2c1d7e9b",
-  "name": "Platform API Reference",
-  "slug": "platform-api-reference",
-  "status": "active",
-  "visibility": "public",
-  "default_branch": "main",
-  "settings": {
-    "custom_domain": "docs.acmecorp.com",
-    "enforce_https": true,
-    "search_enabled": true,
-    "versioning_strategy": "branch-based",
-    "allowed_ip_ranges": ["10.0.0.0/8", "172.16.0.0/12"]
-  },
-  "team": {
-    "owner_id": "usr_9c2d4e6f8a1b",
-    "member_count": 12
-  },
-  "metrics": {
-    "total_pages": 147,
-    "monthly_page_views": 284500,
-    "avg_build_time_ms": 8200
-  },
-  "last_deployed_at": "2025-06-14T18:32:00Z",
-  "created_at": "2025-01-10T09:15:00Z",
-  "updated_at": "2025-06-14T18:32:00Z"
-}
-```
-
-**Try it out**
-
-<ApiPlayground
-  method="GET"
-  url="https://jsonplaceholder.typicode.com/posts/1"
-/>
-
----
-
-### Create Project
-
-Provision a new documentation project within the authenticated organization.
-
-```
-POST /v1/projects
-```
-
-**Request Body**
-
-```json
-{
-  "name": "Payments Service Documentation",
-  "slug": "payments-service-docs",
-  "visibility": "private",
-  "default_branch": "main",
-  "settings": {
-    "search_enabled": true,
-    "versioning_strategy": "tag-based"
-  }
-}
-```
-
-- `name` (string, **required**) — Human-readable project name (3–128 characters)
-- `slug` (string) — URL-safe identifier. Auto-generated from `name` if omitted
-- `visibility` (string) — `public` or `private`. Defaults to `public`
-- `default_branch` (string) — Git branch for production builds. Defaults to `main`
-- `settings.search_enabled` (boolean) — Enable full-text search. Defaults to `true`
-- `settings.versioning_strategy` (string) — `branch-based` or `tag-based`. Defaults to `branch-based`
-
-**Response** `201 Created`
-
-```json
-{
-  "id": "proj_2e7f9a4b1c3d",
-  "name": "Payments Service Documentation",
-  "slug": "payments-service-docs",
-  "status": "active",
-  "visibility": "private",
-  "default_branch": "main",
-  "settings": {
-    "custom_domain": null,
-    "enforce_https": true,
-    "search_enabled": true,
-    "versioning_strategy": "tag-based",
-    "allowed_ip_ranges": []
-  },
-  "team": {
-    "owner_id": "usr_9c2d4e6f8a1b",
-    "member_count": 1
-  },
-  "metrics": {
-    "total_pages": 0,
-    "monthly_page_views": 0,
-    "avg_build_time_ms": null
-  },
-  "last_deployed_at": null,
-  "created_at": "2025-06-15T10:00:00Z",
-  "updated_at": "2025-06-15T10:00:00Z"
-}
-```
-
-**Try it out**
-
-<ApiPlayground
-  method="POST"
-  url="https://jsonplaceholder.typicode.com/posts"
-  headers={[{ key: "Content-Type", value: "application/json" }]}
-  body={`{\n  "name": "Payments Service Documentation",\n  "slug": "payments-service-docs",\n  "visibility": "private",\n  "default_branch": "main"\n}`}
-/>
-
----
-
-### Delete Project
-
-Permanently delete a project, including all associated deployments, build artifacts, and analytics data. This action is irreversible.
-
-```
-DELETE /v1/projects/:id
-```
-
-**Path Parameters**
-
-- `id` (string) — Unique project identifier
-
-**Response** `204 No Content`
-
-No response body is returned. Deletion is processed asynchronously — associated resources may take up to 30 seconds to be fully purged.
-
-**Try it out**
-
-<ApiPlayground
-  method="DELETE"
-  url="https://jsonplaceholder.typicode.com/posts/1"
-/>
-
----
 
 ## Error Handling
 
-All errors return a consistent JSON envelope:
+All errors follow a consistent format:
 
 ```json
 {
-  "error": {
-    "code": "validation_error",
-    "message": "The 'name' field must be between 3 and 128 characters.",
-    "request_id": "req_8f2a4b6c1d3e",
-    "status": 422
-  }
+  "detail": "Error message describing what went wrong"
 }
 ```
 
-Every error response includes a `request_id` that can be provided to support for investigation.
+Validation errors return an array of issues:
 
-**Error Codes**
-
-- `400 bad_request` — Malformed JSON or invalid content type
-- `401 unauthorized` — Missing, expired, or invalid API key
-- `403 forbidden` — API key lacks required scope or permission
-- `404 not_found` — Resource does not exist or is not accessible
-- `409 conflict` — Resource already exists (e.g. duplicate slug)
-- `422 validation_error` — Request body failed schema validation
-- `429 rate_limited` — Request rate exceeded. See `Retry-After` header
-- `500 internal_error` — Unexpected server error. Retry with backoff
-- `503 service_unavailable` — Temporary outage. Check status.docstech.dev
-
-## Pagination
-
-List endpoints use cursor-based pagination. Response metadata includes `page`, `per_page`, `total`, and `total_pages` fields. To iterate through all results:
-
-```typescript
-let page = 1
-let hasMore = true
-
-while (hasMore) {
-  const res = await client.projects.list({ page, per_page: 100 })
-  process(res.data)
-  hasMore = page < res.meta.total_pages
-  page++
+```json
+{
+  "detail": [
+    {
+      "loc": ["body", "query"],
+      "msg": "String should have at least 5 characters",
+      "type": "string_too_short"
+    }
+  ]
 }
 ```
 
-## SDKs
+**Common HTTP Status Codes**
 
-Official client libraries handle authentication, pagination, retries, and type safety:
+- **200** — Success
+- **401** — Missing or invalid API key
+- **404** — Job or resource not found
+- **422** — Validation error (bad request body)
+- **429** — Rate limit exceeded
+- **500** — Internal server error
 
-- **JavaScript/TypeScript** — `npm install @docstech/sdk` (v2.4.0)
-- **Python** — `pip install docstech` (v1.8.0)
-- **Go** — `go get github.com/docstech/docstech-go` (v0.12.0)
+## Endpoints
 
-```typescript
-import { DocsTech } from "@docstech/sdk"
-
-const client = new DocsTech({
-  apiKey: process.env.DOCSTECH_API_KEY,
-  baseUrl: "https://api.docstech.dev/v1", // optional, defaults to production
-  timeout: 30_000, // request timeout in ms
-  retries: 3, // automatic retries with exponential backoff
-})
-
-const projects = await client.projects.list({
-  status: "active",
-  sort: "updated_at",
-  order: "desc",
-  per_page: 50,
-})
-
-for (const project of projects.data) {
-  console.log(`${project.name} — ${project.metrics.monthly_page_views} views/mo`)
-}
-```
+- [Generate Video](/api/generate) — `POST /generate`
+- [Job Status](/api/job-status) — `GET /jobs/{job_id}`
+- [Stream Updates (SSE)](/api/stream) — `GET /jobs/{job_id}/stream`
+- [Stop Job](/api/stop-job) — `POST /jobs/{job_id}/stop`

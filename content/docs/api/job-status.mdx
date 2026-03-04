@@ -1,0 +1,74 @@
+---
+title: Job Status
+description: Poll the status and progress of a video generation job.
+order: 3
+---
+
+# Job Status
+
+Poll the status of a video generation job.
+
+```
+GET /api/v1/jobs/{job_id}
+```
+
+<ApiPlayground
+  method="GET"
+  url="https://api.aiprep.in/api/v1/jobs/your-job-id"
+  auth={{ type: "api-key", key: "X-API-Key", value: "", addTo: "header" }}
+/>
+
+## Path Parameters
+
+- `job_id` (string, required) — The unique job identifier returned from [/generate](/api/generate)
+
+## Headers
+
+- `X-API-Key` (string, required) — Your API key
+
+## Response `200 OK`
+
+```json
+{
+  "job_id": "abc123-def456-ghi789",
+  "status": "processing",
+  "progress": 45,
+  "current_step": "Generating animations",
+  "video_url": null,
+  "thumbnail_url": null,
+  "duration": null,
+  "file_size_mb": null,
+  "has_narration": null,
+  "error": null,
+  "created_at": "2025-06-01T12:00:00Z",
+  "updated_at": "2025-06-01T12:02:30Z",
+  "steps": [
+    { "name": "Planning", "status": "completed" },
+    { "name": "Generating animations", "status": "in_progress" },
+    { "name": "Rendering video", "status": "pending" }
+  ],
+  "estimated_time_remaining": 120,
+  "elapsed_time": 150
+}
+```
+
+## Response Fields
+
+- `job_id` (string) — Unique job identifier.
+- `status` (string) — `"pending"`, `"processing"`, `"completed"`, `"failed"`, or `"cancelled"`.
+- `progress` (integer) — Progress percentage (0-100).
+- `current_step` (string or null) — Description of the current processing step.
+- `video_url` (string or null) — Final video URL (available when `status` is `"completed"`).
+- `thumbnail_url` (string or null) — Video thumbnail URL.
+- `duration` (number or null) — Video duration in seconds.
+- `file_size_mb` (number or null) — Video file size in megabytes.
+- `has_narration` (boolean or null) — Whether the video includes narration.
+- `error` (string or null) — Error message if `status` is `"failed"`.
+- `steps` (array or null) — Detailed breakdown of processing steps.
+- `estimated_time_remaining` (integer or null) — Estimated seconds remaining.
+- `elapsed_time` (integer or null) — Seconds elapsed since job started.
+- `created_at` (string) — ISO 8601 timestamp of job creation.
+- `updated_at` (string) — ISO 8601 timestamp of last update.
+
+> Poll every 2-5 seconds until `status` is `"completed"` or `"failed"`. For real-time updates without polling, use the [SSE Stream](/api/stream) endpoint instead.
+

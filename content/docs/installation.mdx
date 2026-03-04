@@ -1,92 +1,60 @@
 ---
 title: Installation
-description: Clone the DocsTech repository, install dependencies, and start building your documentation site.
+description: Install DocsTech and set up your local development environment.
 ---
 
 # Installation
 
 ## Prerequisites
 
-- **Node.js 18.17+** — LTS recommended. Verified on 20.x and 22.x.
-- **Bun 1.0+** — Used as the default package manager.
-- **Git 2.30+** — Required for cloning the repository.
+- Node.js 18+ or Bun 1.0+
+- Git
 
-## Clone the Repository
-
-```bash
-git clone https://github.com/ankurgajurel/docstech.git
-cd docstech
-```
-
-## Install Dependencies
+## Install
 
 ```bash
-bun install
-```
-
-## Start the Development Server
-
-```bash
+bunx create-docstech@latest my-docs
+cd my-docs
 bun dev
 ```
 
-Your docs site is now running at `http://localhost:3000` with hot module replacement. Content changes are reflected instantly without a full rebuild.
+Your docs site is now running at `http://localhost:3000`.
 
 ## Project Structure
 
+After scaffolding, your project looks like this:
+
 ```
-docstech/
+my-docs/
 ├── content/
-│   └── docs/              # Your MDX documentation files (edit these)
-│       ├── introduction.mdx
-│       ├── installation.mdx
-│       └── api/
-│           └── rest.mdx
-├── app/                   # Next.js application routes
-├── components/            # UI components
-│   ├── ui/                # Design system primitives
-│   └── sidebar/           # Navigation components
-├── lib/                   # Utilities and content pipeline
-├── providers/             # React context providers
-├── public/                # Static assets (logos, favicons)
+│   └── docs/          # Your MDX documentation files
+├── app/
+│   └── docs/          # Next.js routes (auto-generated)
+├── components/        # UI components
+├── public/            # Static assets
 ├── next.config.ts
 └── package.json
 ```
 
-## Writing Content
+## Adding Content
 
-All your documentation lives in `content/docs/`. Create or edit `.mdx` files there. Each file needs frontmatter with a `title` and `description`:
+Create `.mdx` files inside `content/docs/`. Each file needs frontmatter:
 
 ```mdx
 ---
-title: Webhooks
-description: Configure event-driven notifications for deployment and content lifecycle events.
+title: My Page
+description: A short description for SEO and previews.
 ---
 
-# Webhooks
+# My Page
 
-Subscribe to real-time events from the DocsTech platform.
-Webhooks are delivered as POST requests with a signed payload.
+Your content here.
 ```
 
-That's it — the build pipeline picks up new files, adds them to the navigation tree, and renders them as fully styled pages.
+The file path determines the URL:
 
-### URL Routing
-
-File paths inside `content/docs/` map directly to URL routes:
-
-- `content/docs/introduction.mdx` → `/docs/introduction`
-- `content/docs/api/rest.mdx` → `/docs/api/rest`
-- `content/docs/guides/webhooks.mdx` → `/docs/guides/webhooks`
-
-### Sidebar Navigation
-
-To add pages to the sidebar, edit the navigation config at `components/sidebar/navigation.ts`. Group pages by section and assign icons.
-
-## Production Build
-
-```bash
-bun run build
-```
-
-The output is a static export ready for deployment to any CDN, edge network, or container runtime.
+| File                          | URL                     |
+|-------------------------------|-------------------------|
+| `content/docs/introduction.mdx` | `/docs/introduction`  |
+| `content/docs/api/rest.mdx`     | `/docs/api/rest`      |
+| `content/docs/guides/routing.mdx` | `/docs/guides/routing` |

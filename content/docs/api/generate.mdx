@@ -1,0 +1,72 @@
+---
+title: Generate Video
+description: Start a new video generation job from a text query.
+order: 2
+---
+
+# Generate Video
+
+Create a new video generation job from a text query.
+
+```
+POST /api/v1/generate
+```
+
+<ApiPlayground
+  method="POST"
+  url="https://api.aiprep.in/api/v1/generate"
+  headers={[{ key: "Content-Type", value: "application/json" }]}
+  auth={{ type: "api-key", key: "X-API-Key", value: "", addTo: "header" }}
+  body={`{\n  "query": "Explain the theory of relativity in simple terms",\n  "orientation": "landscape",\n  "language": "english",\n  "duration": 2\n}`}
+/>
+
+## Headers
+
+- `X-API-Key` (string, required) — Your API key
+
+## Request Body
+
+- `query` (string, required) — Text query for video generation (5-5000 chars). Queries longer than 500 chars are automatically summarized.
+- `orientation` (string, default: `"landscape"`) — Video orientation: `"landscape"` (16:9) or `"portrait"` (9:16)
+- `language` (string, default: `"english"`) — Narration language: `"english"`, `"hindi"`, `"en"`, or `"hi"`
+- `duration` (integer, default: `2`) — Video duration in minutes: `1`, `2`, or `3`
+- `mode` (string, default: `"video"`) — `"video"` generates a video, `"text"` returns an instant text response only
+- `chat_id` (string, optional) — Associate this job with an existing chat session. If omitted, a new chat is created.
+- `images` (string[], optional) — Base64-encoded images (`data:image/png;base64,...`). Max 5 images, 10MB each.
+
+## Response `200 OK`
+
+```json
+{
+  "job_id": "abc123-def456-ghi789",
+  "chat_id": "chat_xyz789",
+  "status": "processing",
+  "message": "Video generation started",
+  "video_url": null,
+  "duration": null,
+  "cached": false,
+  "instant_response": null,
+  "images_metadata": null
+}
+```
+
+If the query matches a previously generated video, the response returns immediately with `cached: true` and a `video_url`.
+
+## Response Fields
+
+- `job_id` (string) — Unique job identifier. Use this to track progress.
+- `chat_id` (string or null) — Chat session ID for follow-up messages.
+- `status` (string) — Job status: `"processing"`, `"completed"`, `"cached"`.
+- `message` (string) — Human-readable status message.
+- `video_url` (string or null) — Video URL (populated immediately if cached).
+- `duration` (integer or null) — Video duration in seconds (if cached).
+- `cached` (boolean) — `true` if the result was served from cache.
+- `instant_response` (object or null) — Instant educational content (if available from cache).
+- `images_metadata` (object or null) — Metadata about processed images.
+
+## What's Next
+
+After receiving the `job_id`, track progress using either:
+
+- [Stream Updates (SSE)](/api/stream) — Real-time updates, recommended
+- [Job Status](/api/job-status) — Polling-based approach

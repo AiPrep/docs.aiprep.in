@@ -1,0 +1,48 @@
+---
+title: Stop Job
+description: Cancel a video generation job that is still in progress.
+order: 5
+---
+
+# Stop Job
+
+Cancel a video generation job that is still in progress.
+
+```
+POST /api/v1/jobs/{job_id}/stop
+```
+
+<ApiPlayground
+  method="POST"
+  url="https://api.aiprep.in/api/v1/jobs/your-job-id/stop"
+  auth={{ type: "api-key", key: "X-API-Key", value: "", addTo: "header" }}
+/>
+
+## Path Parameters
+
+- `job_id` (string, required) — The job ID to cancel
+
+## Headers
+
+- `X-API-Key` (string, required) — Your API key
+
+## Response `200 OK`
+
+```json
+{
+  "job_id": "abc123-def456-ghi789",
+  "status": "cancelled",
+  "message": "Job cancellation requested",
+  "was_processing": true
+}
+```
+
+## Response Fields
+
+- `job_id` (string) — The job identifier.
+- `status` (string) — Current job status after the stop request.
+- `message` (string) — Human-readable status message.
+- `was_processing` (boolean) — `true` if the job was actively processing when cancelled.
+
+> Cancellation is graceful — the worker stops at the next checkpoint. Jobs that are already completed or failed cannot be cancelled.
+

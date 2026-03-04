@@ -1,56 +1,41 @@
 ---
 title: Introduction
-description: DocsTech is an enterprise documentation infrastructure for engineering teams shipping at scale.
+description: AIPREP API documentation — integrate AI-powered educational video generation into your application.
 ---
 
 # Introduction
 
-DocsTech is a documentation infrastructure platform built for engineering organizations that operate at scale. It provides a unified authoring layer, real-time collaboration, and automated publishing pipelines — so your documentation ships as reliably as your code.
+The AIPREP API lets you generate AI-powered educational videos from natural language queries. Submit a topic, and AIPREP handles script generation, animation, narration, and video rendering — delivering a ready-to-play video URL.
 
-## Why Engineering Teams Choose DocsTech
+## What You Can Build
 
-- **MDX-native authoring** — Write in Markdown with full React component support. Embed live code samples, interactive diagrams, and API explorers directly into your pages.
-- **Git-backed source of truth** — Content lives in your repository. Every change goes through your existing review workflow — pull requests, CI checks, and branch previews included.
-- **Sub-second builds** — Incremental static generation with edge caching. Pages are pre-rendered at build time and served from the nearest PoP. Cold starts under 50ms.
-- **Multi-tenant theming** — Ship white-labeled documentation portals for each product line or customer segment. Full control over layout, typography, and color systems.
-- **Role-based access** — Granular permissions at the organization, team, and document level. Integrates with your existing IdP via SAML 2.0 and OIDC.
-- **Observability built in** — Track page views, search queries, and API reference usage. Understand what your users actually read.
+- **E-learning platforms** — Generate on-demand explainer videos for any topic.
+- **EdTech products** — Add video generation as a feature in your app.
+- **Content pipelines** — Automate educational content creation at scale.
+- **Study tools** — Let users generate video explanations for their questions.
 
-## Architecture Overview
+## How It Works
 
-DocsTech runs as a Next.js application with a content layer that reads MDX files from your repository at build time. The content pipeline handles frontmatter extraction, cross-reference resolution, search index generation, and OpenAPI spec ingestion automatically.
+1. **Send a query** — POST a text prompt to the `/generate` endpoint.
+2. **Track progress** — Subscribe to real-time updates via SSE, or poll the job status.
+3. **Get the video** — Once complete, use the returned `video_url` to stream or embed the video.
 
-```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│  MDX Content │────▶│ Build Pipeline│────▶│  Edge CDN    │
-│  (Git repo)  │     │ (incremental) │     │  (global)    │
-└──────────────┘     └──────────────┘     └──────────────┘
-                            │
-                     ┌──────▼──────┐
-                     │ Search Index │
-                     │ (auto-gen)   │
-                     └─────────────┘
+```bash
+curl -X POST https://api.aiprep.in/api/v1/generate \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Explain quantum computing in simple terms"}'
 ```
 
-## Quick Example
+## Key Features
 
-Create an MDX file in your content directory with frontmatter metadata:
-
-```mdx
----
-title: Authentication
-description: Configure SSO, API keys, and service account credentials.
----
-
-# Authentication
-
-DocsTech supports multiple authentication strategies for different
-integration patterns. Choose the approach that fits your architecture.
-```
-
-The build pipeline detects new files, adds them to the navigation tree, generates search entries, and deploys the updated site — no manual configuration required.
+- **Fast response** — The generate endpoint returns in ~300ms. Video generation happens in the background.
+- **Built-in caching** — Repeated queries return cached results instantly (60-80% cache hit rate).
+- **Real-time streaming** — SSE endpoint provides live progress updates during generation.
+- **Multi-language** — Supports English and Hindi narration.
+- **Flexible output** — Choose landscape (16:9) or portrait (9:16) orientation and 1-3 minute durations.
 
 ## Next Steps
 
-- [Installation](/installation) — Clone the repository and start your docs site in under a minute.
-- [REST API](/api/rest) — Manage documentation projects, deployments, and access tokens programmatically.
+- [Getting Started](/getting-started) — Set up your API key and make your first request.
+- [REST API Reference](/api/rest) — Full endpoint documentation with examples.
